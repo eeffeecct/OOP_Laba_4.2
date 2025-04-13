@@ -6,13 +6,8 @@
 #include <sstream>
 
 
-bool isRussian(const std::string& s) {
-	for (char c : s) {
-		if ((c >= 'А' && c <= 'я') || c == 'ё' || c == 'Ё') {
-			return true;
-		}
-	}
-	return false;
+bool isRussian(const unsigned char& c) {
+	return (c >= 0xC0 && c <= 0xFF) || c == 0xA8 || c == 0xB8;
 }
 
 
@@ -47,7 +42,7 @@ std::vector<std::string> readFile(const std::string& filename) {
 }
 
 
-void printLiterature(const std::vector<std::string>& literature) {
+void printLiteratureWithNumiration(const std::vector<std::string>& literature) {
 	std::for_each(literature.begin(), literature.end(), [](const std::string& line) 
 		{
 			std::cout << line << std::endl;
@@ -55,24 +50,57 @@ void printLiterature(const std::vector<std::string>& literature) {
 }
 
 
+void printLiteratureWithoutNumiration(const std::vector<std::string>& literature) {
+	int k = 1;
+	std::for_each(literature.begin(), literature.end(), [&k](const std::string& line)
+		{
+			std::cout << k++ << ". " << line << std::endl;
+		});
+}
+
+
+bool compare(const std::string& a, const std::string& b) {
+	bool a_ = isRussian(a[0]);
+	bool b_ = isRussian(b[0]);
+
+	if (a_ != b_) {
+		return a_ > b_;  
+	}
+	return a < b;
+}
+
+
 std::vector<std::string> sortByLanguage(const std::vector<std::string>& literature) {
 	// create new sort vector 1) rus 2) eng
-	std::vector<std::string> sortLiterature;
-	std::for_each(literature.begin(), literature.end(), [](const std::string& line)
+	std::vector<std::string> russianLiterature;
+	std::vector<std::string> englishLiterature;
+	std::for_each(literature.begin(), literature.end(), [&russianLiterature, &englishLiterature](const std::string& line)
 		{
-			if (isRussian(line[0])) {
-
+			if (!line.empty()) {
+				if (isRussian(line[0])) {
+					russianLiterature.push_back(line);
+				}
+				else {
+					englishLiterature.push_back(line);
+				}
 			}
 		});
+
+	std::sort(russianLiterature.begin(), russianLiterature.end(), compare);
+	std::sort(englishLiterature.begin(), englishLiterature.end(), compare);
+
+	russianLiterature.insert(russianLiterature.end(), englishLiterature.begin(), englishLiterature.end());
+
+	return russianLiterature;
 }
 
 int main() {
 	std::vector<std::string> literature = readFile("text.txt");
 
 	removeNumberPrefix(literature);
-	printLiterature(literature);
 
-	
-	
-
+	std::vector<std::string> sortedLiterature = sortByLanguage(literature);
+	printLiteratureWithNumiration(sortedLiterature); 
+	std::cout << std::endl;
+	printLiteratureWithoutNumiration(sortedLiterature);
 }
